@@ -1,0 +1,23 @@
+{
+  "name": "nuvio-providers",
+  "version": "1.0.0",
+  "description": "Custom streaming provider scrapers for the Nuvio app",
+  "main": "build.js",
+  "scripts": {
+    "build": "node build.js",
+    "build:watch": "nodemon --watch src -e js,json --exec \"node build.js\"",
+    "start": "node server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.2"
+  },
+  "devDependencies": {
+    "cheerio-without-node-native": "^0.20.2",
+    "esbuild": "^0.20.2",
+    "nodemon": "^3.1.0"
+  }
+}

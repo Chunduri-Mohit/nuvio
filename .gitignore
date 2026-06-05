@@ -1,0 +1,5 @@
+**/node_modules/
+**/dist/
+.gemini/
+*.log
+nuvio-providers/test-homepage.js
