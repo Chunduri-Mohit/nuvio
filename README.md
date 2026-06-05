@@ -1,124 +1,92 @@
-# Custom Media Plugins & Addons Developer Workspace
+# Mohit's Nuvio Providers
 
-This workspace contains boilerplate templates and setups to develop custom scrapers/plugins for the **Nuvio** media organizer app and custom addons for **Stremio**.
+Custom streaming providers for the [Nuvio](https://nuvio.app) app.
 
-## Workspace Structure
+## 🔌 How to Install
 
-- `nuvio-providers/` - JavaScript-based scraper plugins for Nuvio.
-- `stremio-addon/` - Node.js HTTP server implementing the Stremio Addon Protocol.
+1. Open the **Nuvio** app on your device
+2. Go to **Settings** → **Plugins** (or **Local Scrapers**)
+3. Paste this URL in the "Add repository" field:
 
----
-
-## 1. Nuvio Scraper Plugins (`nuvio-providers/`)
-
-Nuvio scrapers are JavaScript files that Nuvio downloads and executes inside its sandboxed Hermes JS engine (React Native). Since Hermes has limited support for modern `async/await` in dynamic imports, we write our scrapers in the `src/` folder and compile them using `esbuild`.
-
-### Setup & Installation
-1. Navigate to the `nuvio-providers` directory.
-2. Install the dev dependencies (esbuild, nodemon) and runner dependencies (express, cors):
-   ```bash
-   cd nuvio-providers
-   npm install
-   ```
-
-### Development Workflow
-1. **Write Scrapers**: Put each scraper in a folder inside `src/`. For example, `src/my-scraper/index.js`.
-2. **Scraper Structure**: Every scraper must export a `getStreams` function:
-   ```javascript
-   async function getStreams(tmdbId, mediaType, seasonNum, episodeNum) {
-       // Your fetching/scraping logic here
-       return [
-           {
-               name: "My Server Name",
-               title: "Video Title",
-               url: "https://example.com/stream.mp4",
-               quality: "1080p",
-               provider: "my-scraper"
-           }
-       ];
-   }
-   module.exports = { getStreams };
-   ```
-3. **Build / Transpile**: To compile your code into the `providers/` directory, run:
-   ```bash
-   npm run build
-   ```
-   Or use the watch command to auto-compile as you save:
-   ```bash
-   npm run build:watch
-   ```
-
-### Local Testing in Nuvio
-1. Start the local server to serve your manifest and compiled JS scrapers:
-   ```bash
-   npm start
-   ```
-   This starts the server on port `3000`.
-2. Open your Nuvio app (ensure the device is on the same local network as your PC).
-3. Go to **Settings > Developer > Plugin Tester** (Note: You must use the debug version of Nuvio, or add via the normal Plugins menu if it supports local manifests).
-4. Enter your computer's local network IP URL:
-   `http://192.168.1.XX:3000/manifest.json` (replace with your actual local IP address).
-
-### Publishing Nuvio Plugins
-Because Nuvio plugins are static JavaScript files, you can host them for free on **GitHub Pages**:
-1. Commit and push the `nuvio-providers` files to a public GitHub repository.
-2. Enable GitHub Pages for your repository in Settings.
-3. Your manifest URL will be: `https://<your-username>.github.io/<your-repo-name>/manifest.json`
-4. Anyone can add this URL to their Nuvio app to install your plugins.
-
----
-
-## 2. Stremio Custom Addon (`stremio-addon/`)
-
-Stremio addons are simple HTTP web servers that respond in JSON according to the Stremio Addon Protocol.
-
-### Setup & Installation
-1. Navigate to the `stremio-addon` directory.
-2. Install dependencies (express, cors, nodemon):
-   ```bash
-   cd stremio-addon
-   npm install
-   ```
-
-### Running Locally
-To start the Stremio addon server locally:
-```bash
-npm run dev
 ```
-The server will start on port `7000`.
+https://raw.githubusercontent.com/Chunduri-Mohit/nuvio/main/manifest.json
+```
 
-### Stremio Addon Protocol Endpoints
-- **Manifest**: `GET /manifest.json`
-  Returns the metadata of the addon (name, logo, supported resources/types).
-- **Stream**: `GET /stream/:type/:id.json`
-  - `:type` is either `movie` or `series`.
-  - `:id` is the IMDb ID (e.g. `tt0137523` for movies, or `tt0944947:1:1` for series season 1 episode 1).
-  Returns an array of streams:
-  ```json
-  {
-    "streams": [
-      {
-        "name": "My Stream Provider",
-        "title": "Stream Quality Details\n1080p",
-        "url": "https://example.com/video.mp4"
-      }
-    ]
-  }
-  ```
+4. Press **Save** / **Submit**
+5. All providers will appear in your plugins list
 
-### Local Testing in Stremio
-1. Launch the Stremio App.
-2. Navigate to **Add-ons**.
-3. In the search box / input field, enter: `http://localhost:7000/manifest.json` and click **Install**.
-4. Now, when you open a movie or series in Stremio, your custom addon will appear in the stream list!
+## 📦 Available Providers
 
-### Publishing Stremio Addons
-Since Stremio addons are dynamic HTTP servers, you need to host them on a hosting platform:
-1. Deploy the Node.js server to **Render.com**, **Fly.io**, **Railway**, or a VPS.
-2. Note your deployment's public domain (e.g. `https://my-custom-addon.onrender.com`).
-3. To share/install, use: `https://my-custom-addon.onrender.com/manifest.json`.
-4. (Optional) For remote testing without deploying, you can expose your local server temporarily using **Ngrok**:
-   ```bash
-   ngrok http 7000
-   ```
-   And use the generated `https://xxxx.ngrok-free.app/manifest.json` URL.
+| Provider | Description | Quality | Formats |
+|----------|-------------|---------|---------|
+| **4KHDHub** | 4KHDHub direct download links | 480p–2160p | MKV |
+| **UHDMovies** | UHD Movies with multiple resolutions | 720p–2160p | MKV |
+| **OlaMovies** | 4K HDR & 60FPS high quality streams | 1080p–2160p | MKV |
+
+## 🛠️ Development
+
+### Prerequisites
+- Node.js 16+
+- npm
+
+### Setup
+```bash
+cd nuvio-providers
+npm install
+```
+
+### Build providers
+```bash
+npm run build
+```
+This bundles each `src/<provider>/index.js` into `providers/<provider>.js` using esbuild.
+
+### Test a provider locally
+```bash
+node test-scraper.js <provider-id> <tmdb-id> [media-type] [season] [episode]
+
+# Examples:
+node test-scraper.js uhdmovies 550 movie          # Fight Club
+node test-scraper.js 4khdhub 157336 movie          # Interstellar
+node test-scraper.js olamovies 496243 movie        # Parasite
+node test-scraper.js 4khdhub 1399 tv 1 1           # Game of Thrones S01E01
+```
+
+### Watch mode (auto-rebuild on save)
+```bash
+npm run build:watch
+```
+
+## 📁 Project Structure
+
+```
+nuvio/
+├── manifest.json           ← Root manifest (used by Nuvio app)
+├── providers/              ← Root providers (used by Nuvio app)
+│   ├── 4khdhub.js
+│   ├── uhdmovies.js
+│   └── olamovies.js
+├── nuvio-providers/        ← Development workspace
+│   ├── src/                ← Source code (edit these)
+│   │   ├── 4khdhub/
+│   │   ├── uhdmovies/
+│   │   ├── olamovies/
+│   │   └── example-provider/
+│   ├── providers/          ← Built output (auto-generated)
+│   ├── build.js            ← Build script
+│   ├── server.js           ← Local test server
+│   ├── test-scraper.js     ← CLI test runner
+│   └── package.json
+└── stremio-addon/          ← Stremio addon (separate)
+```
+
+## ⚠️ Notes
+
+- Domains for these sites change frequently. The providers automatically fetch the latest domains from a public domains list
+- Providers run inside the Hermes JS engine (React Native), so avoid Node.js-specific APIs
+- `async/await` is transpiled by esbuild for Hermes compatibility
+- After editing source files, rebuild and copy the output to `providers/` at root
+
+## 📄 License
+
+ISC

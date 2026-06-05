@@ -61,23 +61,6 @@
       "contentLanguage": [
         "en"
       ]
-    },
-    {
-      "id": "example-provider",
-      "name": "Example Provider",
-      "description": "Demo provider with test streams for development",
-      "version": "1.0.0",
-      "author": "Developer",
-      "supportedTypes": [
-        "movie",
-        "tv"
-      ],
-      "filename": "providers/example-provider.js",
-      "enabled": false,
-      "logo": "https://www.google.com/s2/favicons?domain=wikipedia.org&sz=128",
-      "contentLanguage": [
-        "en"
-      ]
     }
   ]
 }
