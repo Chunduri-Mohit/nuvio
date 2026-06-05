@@ -65,6 +65,88 @@ function parseQuality(text) {
     return "720p";
 }
 
+// Bypasses the unblockedgames redirect protector to get the final driveseed/download URL
+async function bypassUnblockedGames(sidUrl) {
+    try {
+        const res = await fetch(sidUrl, { headers: { "User-Agent": USER_AGENT } });
+        const html = await res.text();
+        const $ = cheerio.load(html);
+        
+        const form0 = $('form#landing');
+        const form0Action = form0.attr('action') || sidUrl;
+        const form0Inputs = {};
+        form0.find('input').each((_, inp) => {
+            form0Inputs[$(inp).attr('name')] = $(inp).attr('value') || '';
+        });
+        
+        if (!form0Inputs['_wp_http']) return sidUrl;
+        
+        const postRes = await fetch(form0Action, {
+            method: "POST",
+            headers: {
+                "User-Agent": USER_AGENT,
+                "Content-Type": "application/x-www-form-urlencoded"
+            },
+            body: new URLSearchParams(form0Inputs).toString()
+        });
+        const postHtml = await postRes.text();
+        const $post = cheerio.load(postHtml);
+        
+        const form1 = $post('form#landing');
+        const form1Action = form1.attr('action');
+        const form1Inputs = {};
+        form1.find('input').each((_, inp) => {
+            form1Inputs[$post(inp).attr('name')] = $post(inp).attr('value') || '';
+        });
+        
+        if (!form1Inputs['_wp_http2']) return sidUrl;
+        
+        const postRes2 = await fetch(form1Action, {
+            method: "POST",
+            headers: {
+                "User-Agent": USER_AGENT,
+                "Content-Type": "application/x-www-form-urlencoded",
+                "Referer": form0Action
+            },
+            body: new URLSearchParams(form1Inputs).toString()
+        });
+        const postHtml2 = await postRes2.text();
+        const $post2 = cheerio.load(postHtml2);
+        
+        let scriptContent = '';
+        $post2('script').each((_, el) => {
+            scriptContent += $post2(el).html() + '\n';
+        });
+        
+        const match = scriptContent.match(/s_343\s*\(\s*'([^']+)'\s*,\s*'([^']+)'/);
+        if (match) {
+            const cookieName = match[1];
+            const cookieValue = match[2];
+            const finalUrl = `https://cloud.unblockedgames.world/?go=${cookieName}`;
+            
+            const finalRes = await fetch(finalUrl, {
+                headers: {
+                    "User-Agent": USER_AGENT,
+                    "Cookie": `${cookieName}=${cookieValue}`
+                }
+            });
+            const finalHtml = await finalRes.text();
+            const $final = cheerio.load(finalHtml);
+            
+            const metaRefresh = $final('meta[http-equiv="refresh"]').attr('content');
+            if (metaRefresh) {
+                const urlMatch = metaRefresh.match(/url=([^"]+)/i);
+                if (urlMatch) {
+                    return urlMatch[1];
+                }
+            }
+        }
+    } catch (err) {
+        console.log(`[UHDMovies bypasser] Failed resolving ${sidUrl}: ${err.message}`);
+    }
+    return sidUrl;
+}
+
 async function getStreams(tmdbId, mediaType, seasonNum, episodeNum) {
     try {
         const domain = await getLatestDomain();
@@ -83,7 +165,6 @@ async function getStreams(tmdbId, mediaType, seasonNum, episodeNum) {
         
         const results = [];
         
-        // Match article.gridlove-post structure
         $('article.gridlove-post').each((_, el) => {
             const $el = $(el);
             const titleRaw = $el.find('h1.sanket, h2.entry-title a').text().trim();
@@ -99,33 +180,39 @@ async function getStreams(tmdbId, mediaType, seasonNum, episodeNum) {
             return [];
         }
         
-        // Use first result as matching post
+        // Pick best matching post
         const bestPost = results[0];
+        
+        // Title verification check
+        const searchedTitle = media.title.toLowerCase();
+        const matchedTitle = bestPost.title.toLowerCase();
+        const searchWords = searchedTitle.split(/\s+/).filter(w => w.length > 2);
+        const isMatched = searchWords.every(word => matchedTitle.includes(word));
+        
+        if (!isMatched) {
+            console.log(`[UHDMovies] Matched post "${bestPost.title}" does not overlap enough with searched title "${media.title}". Ignoring.`);
+            return [];
+        }
+        
         console.log(`[UHDMovies] Extracting links from post: ${bestPost.title}`);
         
         const postRes = await fetch(bestPost.url, { headers: { 'User-Agent': USER_AGENT } });
         const postHtml = await postRes.text();
         const $post = cheerio.load(postHtml);
         
-        const streams = [];
+        const rawStreams = [];
         
-        // UHDMovies formats downloads/streams inside styled tables or links.
-        // We'll traverse all anchor tags on the page looking for standard download links.
         $post('a').each((_, el) => {
             const href = $post(el).attr('href') || '';
             const text = $post(el).text().trim() || $post(el).parent().text().trim();
-            
-            if (href.startsWith('http') && !href.includes('uhdmovies') && !href.includes('facebook') && !href.includes('twitter') && !href.includes('telegram')) {
-                console.log(`[UHDMovies debug] Text: "${text.substring(0, 30)}", Href: ${href}`);
-            }
             
             if (href.match(/instant|drive|gdrive|sharer|kolop|hubdrive|appdrive|gdflix|vcloud|mdisk|unblockedgames|sid=/i)) {
                 const quality = parseQuality(text + " " + bestPost.title);
                 const size = parseSize(text) || "Unknown Size";
                 
-                streams.push({
+                rawStreams.push({
                     name: `UHDMovies (${quality})`,
-                    title: `${bestPost.title.substring(0, 45)}... [${size}]`,
+                    title: `${bestPost.title.substring(0, 35)}... [${size}]`,
                     url: href,
                     quality: quality,
                     size: size,
@@ -134,8 +221,28 @@ async function getStreams(tmdbId, mediaType, seasonNum, episodeNum) {
             }
         });
         
-        console.log(`[UHDMovies] Found ${streams.length} links`);
-        return streams;
+        console.log(`[UHDMovies] Found ${rawStreams.length} raw links. Resolving redirects...`);
+        
+        // Limit to first 12 raw links to prevent overloading network
+        const linksToResolve = rawStreams.slice(0, 12);
+        
+        // Resolve link protector URLs in parallel
+        const resolvedStreams = await Promise.all(linksToResolve.map(async (stream) => {
+            if (stream.url.includes('unblockedgames') || stream.url.includes('sid=')) {
+                const resolvedUrl = await bypassUnblockedGames(stream.url);
+                return { ...stream, url: resolvedUrl };
+            }
+            return stream;
+        }));
+        
+        // Filter out category redirects (e.g. uhdmovies.mov/4k-movies/) and invalid links
+        const finalStreams = resolvedStreams.filter(stream => {
+            const url = stream.url.toLowerCase();
+            return !url.includes('uhdmovies') && !url.includes('/4k-movies/') && url.startsWith('http');
+        });
+        
+        console.log(`[UHDMovies] Returning ${finalStreams.length} resolved stream links`);
+        return finalStreams;
         
     } catch (e) {
         console.error("[UHDMovies] Scraper error:", e.message);

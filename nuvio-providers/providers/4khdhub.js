@@ -1,3 +1,22 @@
+var __defProp = Object.defineProperty;
+var __defProps = Object.defineProperties;
+var __getOwnPropDescs = Object.getOwnPropertyDescriptors;
+var __getOwnPropSymbols = Object.getOwnPropertySymbols;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __propIsEnum = Object.prototype.propertyIsEnumerable;
+var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
+var __spreadValues = (a, b) => {
+  for (var prop in b || (b = {}))
+    if (__hasOwnProp.call(b, prop))
+      __defNormalProp(a, prop, b[prop]);
+  if (__getOwnPropSymbols)
+    for (var prop of __getOwnPropSymbols(b)) {
+      if (__propIsEnum.call(b, prop))
+        __defNormalProp(a, prop, b[prop]);
+    }
+  return a;
+};
+var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
 var __async = (__this, __arguments, generator) => {
   return new Promise((resolve, reject) => {
     var fulfilled = (value) => {
@@ -39,7 +58,7 @@ function getLatestDomain() {
         domainCache.ts = now;
       }
     } catch (e) {
-      console.log("[4KHDHub] Domain fetch error, falling back to cache:", e.message);
+      console.log("[4KHDHub] Domain fetch error:", e.message);
     }
     return domainCache.url;
   });
@@ -83,6 +102,80 @@ function parseQuality(text) {
     return "480p";
   return "720p";
 }
+function bypassUnblockedGames(sidUrl) {
+  return __async(this, null, function* () {
+    try {
+      const res = yield fetch(sidUrl, { headers: { "User-Agent": USER_AGENT } });
+      const html = yield res.text();
+      const $ = cheerio.load(html);
+      const form0 = $("form#landing");
+      const form0Action = form0.attr("action") || sidUrl;
+      const form0Inputs = {};
+      form0.find("input").each((_, inp) => {
+        form0Inputs[$(inp).attr("name")] = $(inp).attr("value") || "";
+      });
+      if (!form0Inputs["_wp_http"])
+        return sidUrl;
+      const postRes = yield fetch(form0Action, {
+        method: "POST",
+        headers: {
+          "User-Agent": USER_AGENT,
+          "Content-Type": "application/x-www-form-urlencoded"
+        },
+        body: new URLSearchParams(form0Inputs).toString()
+      });
+      const postHtml = yield postRes.text();
+      const $post = cheerio.load(postHtml);
+      const form1 = $post("form#landing");
+      const form1Action = form1.attr("action");
+      const form1Inputs = {};
+      form1.find("input").each((_, inp) => {
+        form1Inputs[$post(inp).attr("name")] = $post(inp).attr("value") || "";
+      });
+      if (!form1Inputs["_wp_http2"])
+        return sidUrl;
+      const postRes2 = yield fetch(form1Action, {
+        method: "POST",
+        headers: {
+          "User-Agent": USER_AGENT,
+          "Content-Type": "application/x-www-form-urlencoded",
+          "Referer": form0Action
+        },
+        body: new URLSearchParams(form1Inputs).toString()
+      });
+      const postHtml2 = yield postRes2.text();
+      const $post2 = cheerio.load(postHtml2);
+      let scriptContent = "";
+      $post2("script").each((_, el) => {
+        scriptContent += $post2(el).html() + "\n";
+      });
+      const match = scriptContent.match(/s_343\s*\(\s*'([^']+)'\s*,\s*'([^']+)'/);
+      if (match) {
+        const cookieName = match[1];
+        const cookieValue = match[2];
+        const finalUrl = `https://cloud.unblockedgames.world/?go=${cookieName}`;
+        const finalRes = yield fetch(finalUrl, {
+          headers: {
+            "User-Agent": USER_AGENT,
+            "Cookie": `${cookieName}=${cookieValue}`
+          }
+        });
+        const finalHtml = yield finalRes.text();
+        const $final = cheerio.load(finalHtml);
+        const metaRefresh = $final('meta[http-equiv="refresh"]').attr("content");
+        if (metaRefresh) {
+          const urlMatch = metaRefresh.match(/url=([^"]+)/i);
+          if (urlMatch) {
+            return urlMatch[1];
+          }
+        }
+      }
+    } catch (err) {
+      console.log(`[4KHDHub bypasser] Failed resolving ${sidUrl}: ${err.message}`);
+    }
+    return sidUrl;
+  });
+}
 function getStreams(tmdbId, mediaType, seasonNum, episodeNum) {
   return __async(this, null, function* () {
     try {
@@ -96,22 +189,8 @@ function getStreams(tmdbId, mediaType, seasonNum, episodeNum) {
       const searchUrl = `${domain}/?s=${query}`;
       const res = yield fetch(searchUrl, { headers: { "User-Agent": USER_AGENT } });
       const html = yield res.text();
-      console.log(`[4KHDHub debug] Search URL: ${searchUrl}`);
-      console.log(`[4KHDHub debug] Status: ${res.status}, Length: ${html.length}`);
-      if (html.includes("Cloudflare") || html.includes("Just a moment")) {
-        console.log("[4KHDHub debug] Blocked by Cloudflare protection!");
-      } else {
-        console.log(`[4KHDHub debug] HTML Preview: ${html.substring(0, 400).replace(/\r?\n|\r/g, " ")}`);
-      }
       const $ = cheerio.load(html);
       const searchResults = [];
-      $("a").each((_, el) => {
-        const href = $(el).attr("href") || "";
-        const text = $(el).text().trim();
-        if (href.startsWith("http") && !href.includes("s=") && text) {
-          console.log(`[4KHDHub debug search links] Link: "${text}", Href: ${href}`);
-        }
-      });
       $("article, div.post, div.entry-grid").each((_, el) => {
         const linkEl = $(el).find("h2.entry-title a, h2.title a, a.post-image-link");
         const href = linkEl.attr("href");
@@ -125,18 +204,26 @@ function getStreams(tmdbId, mediaType, seasonNum, episodeNum) {
         return [];
       }
       const bestPost = searchResults[0];
+      const searchedTitle = media.title.toLowerCase();
+      const matchedTitle = bestPost.title.toLowerCase();
+      const searchWords = searchedTitle.split(/\s+/).filter((w) => w.length > 2);
+      const isMatched = searchWords.every((word) => matchedTitle.includes(word));
+      if (!isMatched) {
+        console.log(`[4KHDHub] Matched post "${bestPost.title}" does not contain searched title "${media.title}". Ignoring.`);
+        return [];
+      }
       console.log(`[4KHDHub] Fetching links from post: ${bestPost.title}`);
       const postRes = yield fetch(bestPost.url, { headers: { "User-Agent": USER_AGENT } });
       const postHtml = yield postRes.text();
       const $post = cheerio.load(postHtml);
-      const streams = [];
+      const rawStreams = [];
       $post("a").each((_, el) => {
         const href = $post(el).attr("href") || "";
         const text = $post(el).text().trim() || $post(el).parent().text().trim();
         if (href.match(/hubdrive|gdrive|gdtot|appdrive|gdflix|drive|sharer|kolop|unblockedgames|sid=/i)) {
           const quality = parseQuality(text + " " + bestPost.title);
           const size = parseSize(text) || "Unknown Size";
-          streams.push({
+          rawStreams.push({
             name: `4KHDHub (${quality})`,
             title: `${bestPost.title.substring(0, 40)}... [${size}]`,
             url: href,
@@ -146,8 +233,21 @@ function getStreams(tmdbId, mediaType, seasonNum, episodeNum) {
           });
         }
       });
-      console.log(`[4KHDHub] Extracted ${streams.length} stream links`);
-      return streams;
+      console.log(`[4KHDHub] Found ${rawStreams.length} raw links. Resolving redirects...`);
+      const linksToResolve = rawStreams.slice(0, 12);
+      const resolvedStreams = yield Promise.all(linksToResolve.map((stream) => __async(this, null, function* () {
+        if (stream.url.includes("unblockedgames") || stream.url.includes("sid=")) {
+          const resolvedUrl = yield bypassUnblockedGames(stream.url);
+          return __spreadProps(__spreadValues({}, stream), { url: resolvedUrl });
+        }
+        return stream;
+      })));
+      const finalStreams = resolvedStreams.filter((stream) => {
+        const url = stream.url.toLowerCase();
+        return !url.includes("4khdhub") && !url.includes("/4k-movies/") && url.startsWith("http");
+      });
+      console.log(`[4KHDHub] Returning ${finalStreams.length} resolved stream links`);
+      return finalStreams;
     } catch (error) {
       console.error("[4KHDHub] Scraper error:", error.message);
       return [];
