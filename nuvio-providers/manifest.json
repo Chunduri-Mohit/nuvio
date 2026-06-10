@@ -25,8 +25,8 @@
     {
       "id": "uhdmovies",
       "name": "UHDMovies",
-      "description": "UHD Movies streaming with multiple resolution options",
-      "version": "1.0.2",
+      "description": "UHD Movies 4K/1080p/720p streams with auto-domain resolution (DuckDuckGo + fallback probing)",
+      "version": "2.0.0",
       "author": "Mohit",
       "supportedTypes": [
         "movie",
