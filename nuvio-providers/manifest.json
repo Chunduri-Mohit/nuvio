@@ -1,83 +1,62 @@
-{
-  "name": "Mohit's Nuvio Providers",
-  "version": "1.0.0",
-  "scrapers": [
-    {
-      "id": "4khdhub",
-      "name": "4KHDHub",
-      "description": "4KHDHub direct download links with multiple quality options",
-      "version": "1.0.2",
-      "author": "Mohit",
-      "supportedTypes": [
-        "movie",
-        "tv"
-      ],
-      "filename": "providers/4khdhub.js",
-      "enabled": true,
-      "formats": [
-        "mkv"
-      ],
-      "logo": "https://www.google.com/s2/favicons?domain=4khdhub.click&sz=128",
-      "contentLanguage": [
-        "en"
-      ]
-    },
-    {
-      "id": "uhdmovies",
-      "name": "UHDMovies",
-      "description": "UHD Movies 4K/1080p/720p streams with auto-domain resolution (DuckDuckGo + fallback probing)",
-      "version": "2.0.0",
-      "author": "Mohit",
-      "supportedTypes": [
-        "movie",
-        "tv"
-      ],
-      "filename": "providers/uhdmovies.js",
-      "enabled": true,
-      "formats": [
-        "mkv"
-      ],
-      "logo": "https://www.google.com/s2/favicons?domain=uhdmovies.pink&sz=128",
-      "contentLanguage": [
-        "en"
-      ]
-    },
-    {
-      "id": "olamovies",
-      "name": "OlaMovies",
-      "description": "OlaMovies 4K HDR and 60FPS high quality streams",
-      "version": "1.0.2",
-      "author": "Mohit",
-      "supportedTypes": [
-        "movie",
-        "tv"
-      ],
-      "filename": "providers/olamovies.js",
-      "enabled": true,
-      "formats": [
-        "mkv"
-      ],
-      "logo": "https://www.google.com/s2/favicons?domain=olamovies.dad&sz=128",
-      "contentLanguage": [
-        "en"
-      ]
-    },
-    {
-      "id": "example-provider",
-      "name": "Example Provider",
-      "description": "Demo provider with test streams for development",
-      "version": "1.0.0",
-      "author": "Developer",
-      "supportedTypes": [
-        "movie",
-        "tv"
-      ],
-      "filename": "providers/example-provider.js",
-      "enabled": false,
-      "logo": "https://www.google.com/s2/favicons?domain=wikipedia.org&sz=128",
-      "contentLanguage": [
-        "en"
-      ]
-    }
-  ]
-}
+[
+  {
+    "id": "4khdhub",
+    "name": "4KHDHub",
+    "description": "4KHDHub direct download links with multiple quality options",
+    "version": "1.0.2",
+    "author": "Mohit",
+    "supportedTypes": [
+      "movie",
+      "tv"
+    ],
+    "filename": "providers/4khdhub.js",
+    "enabled": true,
+    "formats": [
+      "mkv"
+    ],
+    "logo": "https://www.google.com/s2/favicons?domain=4khdhub.click&sz=128",
+    "contentLanguage": [
+      "en"
+    ]
+  },
+  {
+    "id": "uhdmovies",
+    "name": "UHDMovies",
+    "description": "UHD Movies 4K/1080p/720p streams with auto-domain resolution",
+    "version": "2.0.0",
+    "author": "Mohit",
+    "supportedTypes": [
+      "movie",
+      "tv"
+    ],
+    "filename": "providers/uhdmovies.js",
+    "enabled": true,
+    "formats": [
+      "mkv"
+    ],
+    "logo": "https://www.google.com/s2/favicons?domain=uhdmovies.rodeo&sz=128",
+    "contentLanguage": [
+      "en"
+    ]
+  },
+  {
+    "id": "olamovies",
+    "name": "OlaMovies",
+    "description": "OlaMovies 4K HDR and 60FPS high quality streams",
+    "version": "1.0.2",
+    "author": "Mohit",
+    "supportedTypes": [
+      "movie",
+      "tv"
+    ],
+    "filename": "providers/olamovies.js",
+    "enabled": true,
+    "formats": [
+      "mkv"
+    ],
+    "logo": "https://www.google.com/s2/favicons?domain=olamovies.dad&sz=128",
+    "contentLanguage": [
+      "en"
+    ]
+  }
+]
