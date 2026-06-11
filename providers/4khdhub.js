@@ -113,8 +113,26 @@ function fixUrl(url, baseUrl) {
   try { return new URL(url, baseUrl).toString(); } catch(e) { return url; }
 }
 
+function stripDiacritics(str) {
+  var s = String(str || "");
+  if (typeof s.normalize === "function") {
+    try {
+      return s.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    } catch(e) {}
+  }
+  return s
+    .replace(/[āàáâãäå]/g, "a")
+    .replace(/[ēèéêë]/g, "e")
+    .replace(/[īìíîï]/g, "i")
+    .replace(/[ōòóôõöø]/g, "o")
+    .replace(/[ūùúûü]/g, "u")
+    .replace(/[ç]/g, "c")
+    .replace(/[ñ]/g, "n");
+}
+
 function normalizeTitle(value) {
-  return String(value || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  var s = stripDiacritics(value);
+  return s.toLowerCase().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()\[\]"'?|]/g, " ").replace(/\s+/g, " ").trim();
 }
 
 function extractMainTitle(title) {
@@ -471,7 +489,10 @@ function getTmdbEpisodeName(tmdbId, season, episode) {
 
 function searchContent(query, mediaType, year) {
   return getMainUrl().then(function(mainUrl) {
-    var cleanQuery = query.replace(/[^a-zA-Z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
+    var cleanQuery = stripDiacritics(query).replace(/[.,\/#!$%\^&\*;:{}=\-_`~()\[\]"'?|]/g, " ").replace(/\s+/g, " ").trim();
+    if (!cleanQuery || /^[\s\d]*$/.test(cleanQuery)) {
+      return Promise.resolve(null);
+    }
     var searchQuery = cleanQuery + (year ? " " + year : "");
     var searchUrl = mainUrl + "/?s=" + encodeURIComponent(searchQuery);
     console.log("[4KHDHub] Searching:", searchUrl);
