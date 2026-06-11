@@ -27,10 +27,14 @@ async function testRunner() {
     const season = args[3] || 1;
     const episode = args[4] || 1;
 
-    const scraperPath = path.join(__dirname, 'src', providerId, 'index.js');
+    // Try providers/ first (single-file providers), then src/ (source files)
+    let scraperPath = path.join(__dirname, 'providers', providerId + '.js');
+    if (!fs.existsSync(scraperPath)) {
+        scraperPath = path.join(__dirname, 'src', providerId, 'index.js');
+    }
 
     if (!fs.existsSync(scraperPath)) {
-        console.error(`❌ Scraper source file not found at: ${scraperPath}`);
+        console.error(`❌ Scraper not found in providers/ or src/ for: ${providerId}`);
         process.exit(1);
     }
 
